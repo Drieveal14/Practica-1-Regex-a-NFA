@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "regex.h"
 
-#define NFA_EPSILON '\$' /* símbolo especial que marca una transición epsilon */
+#define NFA_EPSILON '$' /* símbolo especial que marca una transición epsilon */
 
 /* Cada estado puede tener hasta 2 transiciones (construcción de
  * Thompson: un estado nunca necesita más de dos transiciones salientes,

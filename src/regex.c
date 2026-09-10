@@ -3,8 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 
-/* ---------- utilidades de arreglo dinámico de regex_token ---------- */
-/* Inicializa una regex vacía con capacidad para crecer dinámicamente. */
+/* ---------- funciones para el arreglo dinámico de regex_token ---------- */
+
 static void regex_init(regex *r)
 {
     r->size = 0;
@@ -32,29 +32,30 @@ void free_regex(regex *r)
     r->capacity = 0;
 }
 
-/* ---------- paso 1: concatenación implícita -> explícita ---------- */
+/* ---------- paso 1: hacemos la concatenacion explícita ---------- */
 
-/* Indica si el carácter puede iniciar un operando o grupo. */
-static int starts_operand(char c)
-{
-    return c == '(' || (c != ')' && c != '|' && c != '*' &&
-                         c != '+' && c != '?' && c != CONCAT_OP);
-}
-
-/* Indica si el carácter puede terminar un operando o grupo. */
+/*Caracteres que puede actuar como final de un operando/grupo*/
 static int ends_operand(char c)
 {
     return c == ')' || c == '*' || c == '+' || c == '?' ||
            (c != '(' && c != '|' && c != CONCAT_OP);
 }
 
+/*Caracteres que puede actuar como inicio de un operando/grupo*/
+static int starts_operand(char c)
+{
+    return c == '(' || (c != ')' && c != '|' && c != '*' &&
+                         c != '+' && c != '?' && c != CONCAT_OP);
+}
 
-/* Inserta CONCAT_OP entre operandos adyacentes y conserva los escapes.
- * El resultado es una copia que el llamador debe liberar con free(). */
+/* Devuelve una copia de la entrada haciendo explicita la concatenación 
+ * (CONCAT_OP)  */
 static char *make_explicit(const char *input)
 {
     size_t len = strlen(input);
-    char *out = malloc((len * 2 + 1) * sizeof(char)); 
+    /* en el peor de los casos se duplica el tamaño (un CONCAT_OP entre
+     * cada par de caracteres) */
+    char *out = malloc((len * 2 + 1) * sizeof(char));
     size_t j = 0;
 
     int prev_ends_operand = 0; /* ¿el último token emitido puede cerrar un operando? */
@@ -96,6 +97,7 @@ static char *make_explicit(const char *input)
     return out;
     
 }
+
 
 /* ---------- paso 2: shunting-yard (infijo explícito -> postfijo) ---------- */
 

@@ -152,29 +152,87 @@ nfa regex_to_nfa(regex r)
 /* ---------- simulación ---------- */
 /* Simula la ejecución del NFA sobre una cadena de entrada. */
 
-
-
-
-
-/*añade la cerradura epsilon de un estado*/
+/* Agrega `state` y todos los estados alcanzables por epsilon a `set`,
+ * marcando `visited` para evitar ciclos infinitos. */
 static void add_epsilon_closure(nfa *n, int state, bool *set, bool *visited)
 {
+    if (visited[state])
+        return;
+    visited[state] = true;
+    set[state] = true;
 
+    nfa_state *s = &n->states[state];
+    for (int i = 0; i < s->ntrans; i++)
+    {
+        if (s->trans[i].symbol == NFA_EPSILON)
+        {
+            add_epsilon_closure(n, s->trans[i].target, set, visited);
+        }
+    }
 }
 
-/* Determina si una cadena es aceptada por el NFA. */
 int match_nfa(nfa n, const char *str, int len)
 {
-   
+    bool *current = calloc(n.size, sizeof(bool));
+    bool *next = calloc(n.size, sizeof(bool));
+    bool *visited = calloc(n.size, sizeof(bool));
+
+    memset(visited, 0, n.size * sizeof(bool));
+    add_epsilon_closure(&n, n.start, current, visited);
+
+    for (int i = 0; i < len; i++)
+    {
+        memset(next, 0, n.size * sizeof(bool));
+        memset(visited, 0, n.size * sizeof(bool));
+
+        for (int s = 0; s < n.size; s++)
+        {
+            if (!current[s])
+                continue;
+            nfa_state *st = &n.states[s];
+            for (int t = 0; t < st->ntrans; t++)
+            {
+                if (st->trans[t].symbol == str[i])
+                {
+                    add_epsilon_closure(&n, st->trans[t].target, next, visited);
+                }
+            }
+        }
+
+        memcpy(current, next, n.size * sizeof(bool));
+    }
+
+    int accepted = current[n.accept];
+
+    free(current);
+    free(next);
+    free(visited);
+
+    return accepted;
 }
 
 
+/* ---------- serialización ---------- */
 
-/* ---------- representación ---------- */
-/* Representa  el NFA a un archivo de texto plano en `path`
-*/
- 
 bool save_nfa(nfa *n, const char *path)
 {
-    
+    FILE *f = fopen(path, "w");
+    if (!f)
+        return false;
+
+    fprintf(f, "%d %d %d\n", n->size, n->start, n->accept);
+    for (int i = 0; i < n->size; i++)
+    {
+        nfa_state *s = &n->states[i];
+        fprintf(f, "%d", s->ntrans);
+        for (int t = 0; t < s->ntrans; t++)
+        {
+            unsigned char sym = (unsigned char)s->trans[t].symbol;
+            fprintf(f, " %d %d", sym, s->trans[t].target);
+        }
+        fprintf(f, "\n");
+    }
+
+    fclose(f);
+    return true;
 }
