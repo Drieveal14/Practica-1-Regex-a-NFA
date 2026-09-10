@@ -6,6 +6,10 @@
 
 #define NFA_EPSILON '\$' /* símbolo especial que marca una transición epsilon */
 
+/* Cada estado puede tener hasta 2 transiciones (construcción de
+ * Thompson: un estado nunca necesita más de dos transiciones salientes,
+ * ya sean dos epsilon o una transición por símbolo). */
+ 
 typedef struct
 {
     char symbol;  /* NFA_EPSILON para transiciones epsilon */
@@ -27,11 +31,21 @@ typedef struct
     int accept;
 } nfa;
 
+/* Construye un NFA a partir de una regex en notación postfija usando
+ * el algoritmo de construcción de Thompson. */
+
 nfa regex_to_nfa(regex r);
+
+/* Simula el NFA sobre `str` y regresa 1 si la
+ * cadena es aceptada, 0 en caso contrario. */
 
 int match_nfa(nfa n, const char *str, int len);
 
+/* Libera la memoria asociada al NFA. */
+
 void free_nfa(nfa *n);
+
+/* Serializa el NFA a un archivo de texto plano en `path`. */
 
 bool save_nfa(nfa *n, const char *path);
 

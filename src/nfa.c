@@ -64,7 +64,89 @@ void free_nfa(nfa *n)
 
 nfa regex_to_nfa(regex r)
 {
-    
+    nfa n;
+    nfa_init(&n);
+
+    frag stack[STACK_MAX];
+    int top = -1;
+
+    for (int i = 0; i < r.size; i++)
+    {
+        char c = r.items[i].value;
+
+        if (c == CONCAT_OP)
+        {
+            frag f2 = stack[top--];
+            frag f1 = stack[top--];
+            add_trans(&n, f1.accept, NFA_EPSILON, f2.start);
+            stack[++top] = (frag){f1.start, f2.accept};
+        }
+        else if (c == '|')
+        {
+            frag f2 = stack[top--];
+            frag f1 = stack[top--];
+            int s = new_state(&n);
+            int a = new_state(&n);
+            add_trans(&n, s, NFA_EPSILON, f1.start);
+            add_trans(&n, s, NFA_EPSILON, f2.start);
+            add_trans(&n, f1.accept, NFA_EPSILON, a);
+            add_trans(&n, f2.accept, NFA_EPSILON, a);
+            stack[++top] = (frag){s, a};
+        }
+        else if (c == '*')
+        {
+            frag f1 = stack[top--];
+            int s = new_state(&n);
+            int a = new_state(&n);
+            add_trans(&n, s, NFA_EPSILON, f1.start);
+            add_trans(&n, s, NFA_EPSILON, a);
+            add_trans(&n, f1.accept, NFA_EPSILON, f1.start);
+            add_trans(&n, f1.accept, NFA_EPSILON, a);
+            stack[++top] = (frag){s, a};
+        }
+        else if (c == '+')
+        {
+            frag f1 = stack[top--];
+            int a = new_state(&n);
+            add_trans(&n, f1.accept, NFA_EPSILON, f1.start);
+            add_trans(&n, f1.accept, NFA_EPSILON, a);
+            stack[++top] = (frag){f1.start, a};
+        }
+        else if (c == '?')
+        {
+            frag f1 = stack[top--];
+            int s = new_state(&n);
+            int a = new_state(&n);
+            add_trans(&n, s, NFA_EPSILON, f1.start);
+            add_trans(&n, s, NFA_EPSILON, a);
+            add_trans(&n, f1.accept, NFA_EPSILON, a);
+            stack[++top] = (frag){s, a};
+        }
+        else
+        {
+            /* literal */
+            int s = new_state(&n);
+            int a = new_state(&n);
+            add_trans(&n, s, c, a);
+            stack[++top] = (frag){s, a};
+        }
+    }
+
+    if (top >= 0)
+    {
+        frag f = stack[top--];
+        n.start = f.start;
+        n.accept = f.accept;
+    }
+    else
+    {
+        /* regex vacía: NFA que acepta solo la cadena vacía */
+        int s = new_state(&n);
+        n.start = s;
+        n.accept = s;
+    }
+
+    return n;
 }
 
 /* ---------- simulación ---------- */
